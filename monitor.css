@@ -1,0 +1,354 @@
+/* 智慧能源平台 Demo — 能源实时监测页样式（token 见 layout.css / DESIGN-SPEC.md） */
+
+/* ---------------- 顶部 Tab（原站 .tabs / .tabs-item） ---------------- */
+.tabs-card {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 16px;
+}
+.tab {
+  height: 40px;
+  padding: 0 32px;
+  border-radius: var(--r-seg);
+  background: transparent;
+  color: var(--menu-child);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s, background 0.2s;
+}
+.tab:hover { color: var(--primary); }
+.tab.active {
+  background: var(--grad-main);
+  color: #fff;
+}
+
+/* ---------------- Tab 下方层级下拉（站点 → 计量设备） ---------------- */
+.hier-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+}
+.hier-lb { font-size: 14px; color: #333; }
+.hier-select {
+  width: 240px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+.hier-select:hover { border-color: var(--primary-2); }
+.hier-select:focus { border-color: var(--primary); }
+.hier-arrow { color: #bbb; font-size: 12px; margin: 0 2px; }
+
+/* ---------------- 区块骨架 ---------------- */
+.mon-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 470px;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+.mon-left { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.mon-left > .card-liner:last-child { flex: 1 1 auto; }
+.mon-left > .card-liner:last-child > .card-body { flex: 1 1 auto; align-content: center; }
+.mon-right { min-width: 0; display: flex; flex-direction: column; }
+.mon-right > .card-liner { flex: 1 1 auto; display: flex; flex-direction: column; }
+.mon-right > .card-liner > .card-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+.card-title .tools { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.blk-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 10px;
+}
+.blk-title::before { content: "❯"; color: var(--primary-2); font-size: 12px; }
+.blk-title .right { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 400; color: #666; }
+.blk-title .right .sq { width: 8px; height: 8px; display: inline-block; margin: 0 4px 0 8px; border-radius: 1px; }
+
+/* ---------------- 卡片1：房监控 ---------------- */
+.c1-body {
+  display: grid;
+  grid-template-columns: 290px 300px minmax(0, 1fr);
+  gap: 24px;
+  padding: 6px 4px 10px;
+}
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat-tile {
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card-sm);
+  padding: 12px 14px;
+}
+.stat-tile .lb { font-size: 14px; color: #000; }
+.stat-tile .num { font-size: 26px; font-weight: 600; color: var(--orange); line-height: 1.35; }
+.stat-tile .unit { font-size: 12px; color: #8a8a8a; }
+.stat-tile .grade { font-size: 22px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.stat-tile .score-row { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
+.stat-tile .score-row .num { font-size: 14px; line-height: 1.4; color: #8a8a8a; }
+.grade-A { color: var(--success); }
+.grade-B { color: var(--primary); }
+.grade-C { color: var(--orange); }
+.grade-D { color: var(--danger); }
+
+.gray-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gray-tile { background: #F6F6F8; border-radius: var(--r-card); padding: 10px 14px; }
+.gray-tile .lb { font-size: 14px; color: #333; }
+.gray-tile .num { font-size: 22px; font-weight: 600; color: #000; line-height: 1.4; }
+
+/* ---------------- 卡片2：量监控 ---------------- */
+.c2-body { display: grid; gap: 24px; padding: 6px 4px 10px; }
+.energy-panel { padding: 14px 16px; }
+.energy-panel .lb { font-size: 15px; color: #000; }
+.energy-panel .num { font-size: 28px; font-weight: 600; color: var(--orange); line-height: 1.3; }
+.energy-panel .unit { font-size: 12px; color: #8a8a8a; margin-bottom: 12px; }
+.energy-panel .ratio {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FDECEC;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #333;
+}
+.energy-panel .ratio b { color: var(--danger); font-weight: 600; }
+
+.seg { display: flex; background: #fff; border-radius: var(--r-seg); overflow: hidden; }
+.seg span {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--menu-child);
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  border-radius: var(--r-seg);
+  transition: color 0.2s, background 0.2s;
+}
+.seg span:hover { color: var(--primary); }
+.seg span.on { background: var(--grad-main); color: #fff; }
+
+.tag-btn {
+  background: var(--grad-main);
+  color: #fff;
+  font-size: 13px;
+  border-radius: var(--r-seg);
+  height: 28px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 图例 / 条形图 */
+.lg-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; margin-top: 8px; }
+.lg { display: flex; align-items: center; font-size: 12px; color: #666; }
+.lg i { width: 10px; height: 10px; border-radius: 1px; margin-right: 4px; }
+
+.hb-unit { text-align: right; font-size: 11px; color: #999; margin-bottom: 4px; }
+.hb-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer; }
+.hb-row.hot .hb-track i { background: #206DAE; }
+.hb-lb {
+  flex: 0 0 88px;
+  text-align: right;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hb-track { flex: 1 1 auto; height: 8px; position: relative; }
+.hb-track i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: #3E9BE0;
+  border-radius: 2px;
+}
+.hb-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 96px;
+  font-size: 11px;
+  color: #999;
+  border-top: 1px solid #D9D9D9;
+  padding-top: 4px;
+}
+
+/* ---------------- 卡片3：表监控 ---------------- */
+.c3-body { display: grid; gap: 40px; padding: 6px 4px 10px; }
+.c3-body > div { display: flex; flex-direction: column; }
+.c3-body > div > *:last-child { margin-top: auto; }
+.kv-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.kv-table td { border: 1px solid var(--border-2); padding: 8px 12px; white-space: nowrap; }
+.kv-table td.k { background: #F5FAFF; color: #333; width: 46%; }
+.kv-table td.v { color: var(--primary-2); }
+
+.big-num { font-size: 24px; font-weight: 600; color: var(--orange); text-align: center; margin: 4px 0 10px; }
+.big-num small { font-size: 12px; font-weight: 400; color: #8a8a8a; margin-left: 4px; }
+
+.blk-row { display: flex; flex-direction: column; gap: 4px; }
+.blk-row .big-num { margin: 4px 0 10px; }
+
+.rt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+/* ---------------- 卡片4：告警统计 ---------------- */
+.alarm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.alarm-tile {
+  padding: 14px 6px 12px;
+  text-align: center;
+}
+.alarm-tile .ic { display: flex; justify-content: center; color: #3E9BE0; margin-bottom: 6px; }
+.alarm-tile .ic svg { width: 26px; height: 26px; fill: currentColor; }
+.alarm-tile .num { font-size: 20px; font-weight: 600; color: #000; line-height: 1.3; }
+.alarm-tile .num.hit { color: var(--danger); }
+.alarm-tile .lb { font-size: 13px; color: #333; margin-top: 2px; }
+
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 0;
+  min-height: 268px; /* 6 行 */
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.alarm-list::-webkit-scrollbar { width: 4px; }
+.alarm-list::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 2px; }
+.alarm-row {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 10px;
+  background: rgba(243, 244, 246, 0.7);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.alarm-row:hover { background: #F3F4F6; }
+.alarm-row .ic { display: flex; color: #2BA245; }
+.alarm-row .ic svg { width: 16px; height: 16px; fill: currentColor; }
+.alarm-row .ic.pending { color: var(--danger); }
+.alarm-row .nm { color: #333; }
+.alarm-row .tm { margin-left: auto; color: #8a8a8a; font-size: 13px; }
+.alarm-row .st { width: 52px; text-align: right; color: var(--success); }
+.alarm-row .st.pending { color: var(--danger); }
+.alarm-row.clickable { cursor: pointer; }
+
+/* ---------------- 场景切换条 ---------------- */
+.scenario-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  padding: 8px 16px;
+  margin-bottom: 16px;
+}
+.scenario-lb {
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+}
+.scenario-tabs {
+  display: flex;
+  gap: 6px;
+}
+.scenario-tab {
+  height: 30px;
+  padding: 0 16px;
+  border-radius: var(--r-seg);
+  background: #F0F0F0;
+  color: var(--menu-child);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s, background 0.2s;
+}
+.scenario-tab:hover { color: var(--primary); background: #E8E8E8; }
+.scenario-tab.active {
+  background: var(--grad-main);
+  color: #fff;
+}
+
+/* ---------------- 回路切换Tab（直挂回路场景） ---------------- */
+.circuit-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.circuit-tab {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--menu-child);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+}
+.circuit-tab:hover { color: var(--primary); }
+.circuit-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 500;
+}
+
+/* ---------------- 回路选择器（有站点无设备场景Card3内） ---------------- */
+.circuit-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #F9FAFB;
+  border-bottom: 1px solid var(--border);
+}
+.cs-lb { font-size: 13px; color: #666; white-space: nowrap; }
+.cs-select {
+  width: 180px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+.cs-select:hover { border-color: var(--primary-2); }
+.cs-select:focus { border-color: var(--primary); }
