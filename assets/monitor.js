@@ -90,7 +90,7 @@ const TYPES = {
       title: '锅炉房监控',
       stats: [['安全运行', '962', '天'], ['用汽评分', '88.50', '分'], ['锅炉数量', '2', '个'], ['监测点数量', '12', '个']],
       loadTitle: '蒸汽压力监控',
-      loads: [['实时蒸汽压力', '0.82', 'MPa'], ['实时压力率', '68.30', '%'], ['今日最大蒸汽压力', '0.95', 'MPa'], ['今日最小蒸汽压力', '0.71', 'MPa']],
+      loads: [['实时蒸汽压力', '0.82', 'MPa'], ['蒸汽压力负载率', '68.30', '%'], ['今日最大蒸汽压力', '0.95', 'MPa'], ['今日最小蒸汽压力', '0.71', 'MPa']],
       chartTitle: '实时蒸汽压力',
       chart: { unit: 'MPa', yMax: 1, x: X_LABELS, series: [
         { name: '蒸汽总管', color: '#3E9BE0', data: d5([0.82, 0.84, 0.80, 0.86, 0.88, 0.85, 0.83, 0.81, 0.82, 0.84, 0.86, 0.83, 0.82, 0.83, 0.82]) },
@@ -115,12 +115,12 @@ const TYPES = {
     ],
   },
   gas: {
-    tab: '天燃气监测',
+    tab: '天然气监测',
     c1: {
       title: '调压站监控',
       stats: [['安全运行', '1120', '天'], ['用气评分', '90.00', '分'], ['调压站数量', '1', '个'], ['监测点数量', '8', '个']],
       loadTitle: '气压监控',
-      loads: [['实时气压', '0.35', 'MPa'], ['实时气压率', '70.00', '%'], ['今日最大气压', '0.41', 'MPa'], ['今日最小气压', '0.30', 'MPa']],
+      loads: [['实时气压', '0.35', 'MPa'], ['天然气压力负载率', '70.00', '%'], ['今日最大气压', '0.41', 'MPa'], ['今日最小气压', '0.30', 'MPa']],
       chartTitle: '实时气压',
       chart: { unit: 'MPa', yMax: 0.6, x: X_LABELS, series: [
         { name: '进气总管', color: '#3E9BE0', data: d5([0.62, 0.61, 0.63, 0.62, 0.60, 0.61, 0.62, 0.63, 0.61, 0.60, 0.62, 0.61, 0.62, 0.61, 0.62]) },
@@ -428,61 +428,83 @@ function card1Adapt(t) {
   return { title, stats };
 }
 
-/* 场景感知的 Card2 donut 标题和数据 */
-function card2Blocks(t) {
-  const s = SCENARIOS[monState.scenario];
-  const blocks = [...t.c2.blocks];
-  if (monState.tab === 'power') {
-    if (s.hasL2) {
-      /* 有变压器：根据层级显示变电站占比或变压器占比 */
-      if (monState.scenario === 'full') {
-        if (monState.hierLevel === 'station') {
-          /* 变电站层级：显示变电站电量占比 */
-          const h = getHier();
-          const colors = ['#FF8A3D', '#3E9BE0', '#2BA245', '#FFC53D', '#9270CA'];
-          blocks[1] = {
-            kind: 'donut',
-            title: '变电站电量占比',
-            slices: h.stations.map(([name], i) => [name, Math.round(100 / h.stations.length), colors[i % colors.length]]),
-          };
-        } else {
-          /* 变压器层级：显示变压器电量占比 */
-          const h = getHier();
-          const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
-          const devs = curSt ? curSt[1] : [];
-          const colors = ['#FF8A3D', '#3E9BE0', '#2BA245', '#FFC53D', '#9270CA'];
-          blocks[1] = {
-            kind: 'donut',
-            title: '变压器电量占比',
-            slices: devs.map((name, i) => [name, Math.round(100 / devs.length), colors[i % colors.length]]),
-          };
-        }
-      } else if (monState.scenario === 'noL1') {
-        blocks[1] = { kind: 'donut', title: '变压器电量占比', slices: [['1#变压器', 62, '#FF8A3D'], ['2#变压器', 38, '#3E9BE0']] };
-      }
-    } else {
-      /* 无变压器：显示回路占比 */
-      const circuits = getCircuits();
-      const total = circuits.reduce((sum, c) => sum + (c.demand ? parseFloat(c.demand[0]) : 30), 0);
-      const colors = ['#3E9BE0', '#2BA245', '#FFC53D', '#9270CA', '#FF8A3D'];
-      blocks[1] = {
-        kind: 'donut',
-        title: '回路电量占比',
-        slices: circuits.map((c, i) => [c.name, Math.round((parseFloat(c.demand?.[0] || 30) / total) * 100), colors[i % colors.length]]),
+/* 将 slices 聚合为最多5项（前4 + 其他） */
+function aggregateSlices(slices) {
+  const colors = ['#FF8A3D', '#3E9BE0', '#2BA245', '#FFC53D', '#9270CA'];
+  if (slices.length <= 4) {
+    return slices.map((s, i) => [s[0], s[1], s[2] || colors[i % colors.length]]);
+  }
+  const top4 = slices.slice(0, 4).map((s, i) => [s[0], s[1], s[2] || colors[i % colors.length]]);
+  const rest = slices.slice(4).reduce((sum, s) => sum + s[1], 0);
+  top4.push(['其他', rest, colors[4]]);
+  return top4;
+}
+
+/* 根据当前层级获取 donut 的 slices 和标题 */
+function getDonutSlices() {
+  const h = getHier();
+  const tab = monState.tab;
+  const level = monState.hierLevel;
+  const scenario = monState.scenario;
+  const colors = ['#3E9BE0', '#2BA245', '#FFC53D', '#9270CA', '#FF8A3D'];
+
+  if (scenario === 'direct') {
+    const circuits = getCircuits();
+    return {
+      title: tab === 'power' ? '回路电量占比' : '回路用量占比',
+      slices: aggregateSlices(circuits.map((c, i) => [c.name, tab === 'power' ? (parseFloat(c.demand?.[0]) || 30) : [128, 96, 52, 34][i] || 30, colors[i % colors.length]])),
+    };
+  }
+
+  if (tab === 'power') {
+    if (level === 'station') {
+      const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
+      const devs = curSt ? curSt[1] : [];
+      return {
+        title: '变压器电量占比',
+        slices: aggregateSlices(devs.map((name, i) => [name, Math.round(100 / devs.length), colors[i % colors.length]])),
       };
     }
+    if (level === 'dev') {
+      const circuits = getCircuits();
+      return {
+        title: '回路电量占比',
+        slices: aggregateSlices(circuits.map((c, i) => [c.name, parseFloat(c.demand?.[0]) || 30, colors[i % colors.length]])),
+      };
+    }
+    /* circuit 层级：无子回路，显示自身100% */
+    return { title: '回路电量占比', slices: [[monState.circuit || '回路', 100, colors[0]]] };
   }
-  /* 水/蒸汽/天然气：无L2时显示回路用量占比 */
-  if (monState.tab !== 'power' && !s.hasL2) {
-    const circuits = getCircuits();
-    const colors = ['#3E9BE0', '#2BA245', '#FFC53D', '#9270CA'];
-    const unitMap = { water: 'm³', steam: 't', gas: 'm³' };
-    const values = [128, 96, 52, 34]; // mock values
-    blocks[0] = {
-      kind: 'donut',
+
+  /* 水/蒸汽/天然气 */
+  if (level === 'station') {
+    const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
+    const circuitNames = curSt ? curSt[1] : [];
+    const values = [128, 96, 52, 34, 20];
+    return {
       title: '回路用量占比',
-      slices: circuits.map((c, i) => [c.name, values[i] || 30, colors[i % colors.length]]),
+      slices: aggregateSlices(circuitNames.map((name, i) => [name, values[i] || 30, colors[i % colors.length]])),
     };
+  }
+  /* circuit 层级：无子回路，显示自身100% */
+  return { title: '回路用量占比', slices: [[monState.circuit || '回路', 100, colors[0]]] };
+}
+
+/* 场景感知的 Card2 donut 标题和数据 */
+function card2Blocks(t) {
+  const isPower = monState.tab === 'power';
+  const showTop5 = monState.hierLevel !== 'circuit' && monState.scenario !== 'direct';
+  const donut = getDonutSlices();
+  const hierarchyBlock = { kind: 'donut', title: donut.title, slices: donut.slices };
+  const top5Block = t.c2.blocks.find(b => b.kind === 'hbar');
+
+  const blocks = [];
+  if (isPower) {
+    blocks.push(t.c2.blocks[0]); /* 尖峰平谷占比 */
+  }
+  blocks.push(hierarchyBlock);
+  if (showTop5 && top5Block) {
+    blocks.push(top5Block);
   }
   return blocks;
 }
@@ -561,74 +583,58 @@ function card2HTML(t) {
 function card3HTML(t) {
   const s = SCENARIOS[monState.scenario];
   const h = getHier();
-
-  /* 有L2：显示设备级监控（原有逻辑） */
-  if (s.hasL2) {
-    /* 当dev为null时（请选择状态），使用第一个变压器的数据 */
-    const devName = monState.dev || (h.stations.find(([n]) => n === monState.station) || h.stations[0])?.[1]?.[0];
-    const d = h.devData[devName];
-    if (!d) return '';
-
-    const blocks = d.blocks.map((b) => `
-      <div>
-        <div class="blk-title">${b.title}</div>
-        <div class="blk-row">
-          ${b.big ? `<div class="big-num">${b.big[0]}<small>${b.big[1]}</small></div>` : ''}
-          ${kvTable(b.kv)}
-        </div>
-      </div>`).join('');
-
-    /* 当dev为null时显示下拉框，否则显示tag-btn */
-    let toolsHTML = '';
-    if (!monState.dev) {
-      const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
-      const devs = curSt ? curSt[1] : [];
-      const devOpts = devs.map(name => `<option value="${name}">${name}</option>`).join('');
-      toolsHTML = `<div class="tools"><select class="hier-select" id="card3DevSelect">${devOpts}</select></div>`;
-    } else {
-      toolsHTML = `<div class="tools"><span class="tag-btn">${monState.dev}</span></div>`;
-    }
-
-    return `
-    <section class="card-liner">
-      <div class="card-title">${t.c3.title}<span class="tri">▶</span>
-        ${toolsHTML}
-      </div>
-      <div class="card-body c3-body" style="grid-template-columns:${t.c3.cols}">
-        ${blocks}
-        <div>
-          <div class="blk-title">实时监控</div>
-          <div class="rt-grid">${d.rt.map((g) => kvTable(g)).join('')}</div>
-        </div>
-      </div>
-    </section>`;
-  }
-
-  /* 无L2：显示回路级监控 */
-  const circuit = getCircuitData();
-  const circuits = getCircuits();
   const isPower = monState.tab === 'power';
 
-  /* 完整二级场景：回路选择器 */
-  let toolsHTML = '';
-  if (monState.scenario === 'full2') {
-    if (!monState.circuit) {
-      const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
-      const circuitList = curSt ? curSt[1] : [];
-      const circuitOpts = circuitList.map(c => `<option value="${c}">${c}</option>`).join('');
-      toolsHTML = `<div class="tools"><select class="hier-select" id="card3CircuitSelect">${circuitOpts}</select></div>`;
-    } else {
-      toolsHTML = `<div class="tools"><span class="tag-btn">${monState.circuit}</span></div>`;
-    }
-  } else if (monState.scenario === 'direct') {
-    /* 直挂回路场景：显示回路名称 */
-    toolsHTML = `<div class="tools"><span class="tag-btn">${monState.circuit || ''}</span></div>`;
+  /* 回路层级或直挂回路场景：卡片隐藏不显示 */
+  if (monState.hierLevel === 'circuit' || monState.scenario === 'direct') {
+    return '';
   }
 
-  /* 需量/流量块 */
-  let demandBlock = '';
-  if (isPower) {
-    demandBlock = `
+  /* 有L2场景（power full / power noL1） */
+  if (s.hasL2) {
+    /* 变电站级别：显示变压器监控 */
+    if (monState.hierLevel === 'station') {
+      const devName = monState.dev || (h.stations.find(([n]) => n === monState.station) || h.stations[0])?.[1]?.[0];
+      const d = h.devData[devName];
+      if (!d) return '';
+
+      const blocks = d.blocks.map((b) => `
+        <div>
+          <div class="blk-title">${b.title}</div>
+          <div class="blk-row">
+            ${b.big ? `<div class="big-num">${b.big[0]}<small>${b.big[1]}</small></div>` : ''}
+            ${kvTable(b.kv)}
+          </div>
+        </div>`).join('');
+
+      /* 变压器下拉框 */
+      const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
+      const devs = curSt ? curSt[1] : [];
+      const devOpts = devs.map(name => `<option value="${name}" ${name === monState.dev ? 'selected' : ''}>${name}</option>`).join('');
+
+      return `
+      <section class="card-liner">
+        <div class="card-title">${t.c3.title}<span class="tri">▶</span>
+          <div class="tools"><select class="hier-select" id="card3DevSelect">${devOpts}</select></div>
+        </div>
+        <div class="card-body c3-body" style="grid-template-columns:${t.c3.cols}">
+          ${blocks}
+          <div>
+            <div class="blk-title">实时监控</div>
+            <div class="rt-grid">${d.rt.map((g) => kvTable(g)).join('')}</div>
+          </div>
+        </div>
+      </section>`;
+    }
+
+    /* 变压器级别：显示回路监控 */
+    const circuits = getCircuits();
+    const circuit = circuits.find(c => c.name === monState.circuit) || circuits[0];
+    if (!circuit) return '';
+
+    const circuitOpts = circuits.map(c => `<option value="${c.name}" ${c.name === monState.circuit ? 'selected' : ''}>${c.name}</option>`).join('');
+
+    const demandBlock = `
       <div>
         <div class="blk-title">实时需量</div>
         <div class="blk-row">
@@ -636,34 +642,57 @@ function card3HTML(t) {
           ${kvTable([['本月最大', circuit.demandMax[0]], ['发生时间', circuit.demandMax[1]]])}
         </div>
       </div>`;
-  } else {
-    const flowVal = circuit.rt[0][2][1]; // 瞬时流量
-    demandBlock = `
+
+    const pfBlock = `
       <div>
-        <div class="blk-title">实时流量</div>
+        <div class="blk-title">总功率因数</div>
         <div class="blk-row">
-          <div class="big-num">${flowVal.split(' ')[0]}<small>${flowVal.split(' ')[1] || ''}</small></div>
-          ${kvTable([['本月最大', circuit.flowMax[0]], ['发生时间', circuit.flowMax[1]]])}
+          <div class="big-num">${circuit.pf[0]}<small>${circuit.pf[1]}</small></div>
+          ${kvTable(circuit.pfPhases)}
         </div>
       </div>`;
+
+    return `
+    <section class="card-liner">
+      <div class="card-title">回路监控<span class="tri">▶</span>
+        <div class="tools"><select class="hier-select" id="card3CircuitSelect">${circuitOpts}</select></div>
+      </div>
+      <div class="card-body c3-body" style="grid-template-columns:200px 200px minmax(0,1fr)">
+        ${demandBlock}
+        ${pfBlock}
+        <div>
+          <div class="blk-title">实时监控</div>
+          <div class="rt-grid">${circuit.rt.map((g) => kvTable(g)).join('')}</div>
+        </div>
+      </div>
+    </section>`;
   }
 
-  /* 功率因数块（仅电力） */
-  const pfBlock = isPower ? `
+  /* 无L2场景（water/steam/gas full2）：站房级别显示回路监控 */
+  const circuit = getCircuitData();
+  if (!circuit) return '';
+
+  const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
+  const circuitList = curSt ? curSt[1] : [];
+  const circuitOpts = circuitList.map(c => `<option value="${c}" ${c === monState.circuit ? 'selected' : ''}>${c}</option>`).join('');
+
+  const flowVal = circuit.rt[0][2][1];
+  const demandBlock = `
     <div>
-      <div class="blk-title">总功率因数</div>
+      <div class="blk-title">实时流量</div>
       <div class="blk-row">
-        <div class="big-num">${circuit.pf[0]}<small>${circuit.pf[1]}</small></div>
-        ${kvTable(circuit.pfPhases)}
+        <div class="big-num">${flowVal.split(' ')[0]}<small>${flowVal.split(' ')[1] || ''}</small></div>
+        ${kvTable([['本月最大', circuit.flowMax[0]], ['发生时间', circuit.flowMax[1]]])}
       </div>
-    </div>` : '';
+    </div>`;
 
   return `
   <section class="card-liner">
-    <div class="card-title">${monState.scenario === 'full2' ? '回路监控' : '回路监控'}<span class="tri">▶</span>${toolsHTML}</div>
-    <div class="card-body c3-body" style="grid-template-columns:200px ${isPower ? '200px ' : ''}minmax(0,1fr)">
+    <div class="card-title">回路监控<span class="tri">▶</span>
+      <div class="tools"><select class="hier-select" id="card3CircuitSelect">${circuitOpts}</select></div>
+    </div>
+    <div class="card-body c3-body" style="grid-template-columns:200px minmax(0,1fr)">
       ${demandBlock}
-      ${pfBlock}
       <div>
         <div class="blk-title">实时监控</div>
         <div class="rt-grid">${circuit.rt.map((g) => kvTable(g)).join('')}</div>
@@ -702,56 +731,129 @@ function card4HTML(t) {
   </section>`;
 }
 
-/* ==================== 层级选择器（场景感知） ==================== */
-function hierSelectHTML() {
-  const s = SCENARIOS[monState.scenario];
+/* ==================== 设备树数据结构 ==================== */
+function getTreeData() {
   const h = getHier();
+  const tab = monState.tab;
+  const scenario = monState.scenario;
 
-  if (!s.hasL1 && !s.hasL2) {
-    const circuits = getCircuits();
-    const opts = circuits.map(c => `<option value="${c.name}" ${c.name === monState.circuit ? 'selected' : ''}>${c.name}</option>`).join('');
-    return `<div class="hier-bar"><span class="hier-lb">回路选择</span><select class="hier-select" id="hierCircuit">${opts}</select></div>`;
+  /* 根据能源类型和场景构建树形结构 */
+  const tree = { children: [] };
+
+  if (tab === 'power') {
+    /* 电力：变电站→变压器→回路 */
+    h.stations.forEach(([stName, devs]) => {
+      const stationNode = { id: `st-${stName}`, name: stName, type: 'station', children: [] };
+      devs.forEach(devName => {
+        const devNode = { id: `dev-${devName}`, name: devName, type: 'device', children: [] };
+        /* 获取该变压器下的回路 */
+        const circuits = getCircuitsForDev(devName);
+        circuits.forEach(c => {
+          devNode.children.push({ id: `cir-${c.name}`, name: c.name, type: 'circuit' });
+        });
+        stationNode.children.push(devNode);
+      });
+      tree.children.push(stationNode);
+    });
+  } else if (tab === 'water') {
+    /* 水：水泵房→回路 */
+    h.stations.forEach(([stName, circuits]) => {
+      const stationNode = { id: `st-${stName}`, name: stName, type: 'station', children: [] };
+      circuits.forEach(cName => {
+        stationNode.children.push({ id: `cir-${cName}`, name: cName, type: 'circuit' });
+      });
+      tree.children.push(stationNode);
+    });
+  } else if (tab === 'steam') {
+    /* 蒸汽：锅炉房→回路 */
+    h.stations.forEach(([stName, circuits]) => {
+      const stationNode = { id: `st-${stName}`, name: stName, type: 'station', children: [] };
+      circuits.forEach(cName => {
+        stationNode.children.push({ id: `cir-${cName}`, name: cName, type: 'circuit' });
+      });
+      tree.children.push(stationNode);
+    });
+  } else if (tab === 'gas') {
+    /* 天然气：调压站→回路 */
+    h.stations.forEach(([stName, circuits]) => {
+      const stationNode = { id: `st-${stName}`, name: stName, type: 'station', children: [] };
+      circuits.forEach(cName => {
+        stationNode.children.push({ id: `cir-${cName}`, name: cName, type: 'circuit' });
+      });
+      tree.children.push(stationNode);
+    });
   }
 
-  if (s.hasL1 && s.hasL2) {
-    const stOpts = h.stations.map(([st]) => `<option value="${st}" ${st === monState.station ? 'selected' : ''}>${st}</option>`).join('');
-    const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
-    const devs = curSt ? curSt[1] : [];
-    const devOpts = `<option value="">请选择</option>` + devs.map(d => `<option value="${d}" ${d === monState.dev ? 'selected' : ''}>${d}</option>`).join('');
-    return `<div class="hier-bar">
-      <span class="hier-lb">监测层级</span>
-      <select class="hier-select" id="hierStation">${stOpts}</select>
-      <span class="hier-arrow">▶</span>
-      <select class="hier-select" id="hierDev">${devOpts}</select>
-    </div>`;
+  return tree;
+}
+
+function getCircuitsForDev(devName) {
+  /* 获取指定设备下的回路列表 */
+  const circuits = getCircuits();
+  /* 简单返回所有回路，实际可根据设备过滤 */
+  return circuits;
+}
+
+/* ==================== 树形选择器渲染 ==================== */
+function renderTreeNode(node, level = 0) {
+  const hasChildren = node.children && node.children.length > 0;
+  const indent = level * 20;
+  const isSelected = isNodeSelected(node);
+
+  let html = `<div class="tree-node-wrap">`;
+  html += `<div class="tree-node" style="padding-left: ${indent}px" data-id="${node.id}" data-type="${node.type}">`;
+  html += `<span class="tree-toggle ${hasChildren ? 'expanded' : 'leaf'}">${hasChildren ? '▼' : '●'}</span>`;
+  html += `<span class="tree-label ${isSelected ? 'selected' : ''}">${node.name}</span>`;
+  html += `</div>`;
+
+  if (hasChildren) {
+    html += `<div class="tree-children">`;
+    node.children.forEach(child => {
+      html += renderTreeNode(child, level + 1);
+    });
+    html += `</div>`;
   }
 
-  if (!s.hasL1 && s.hasL2) {
-    const devices = h.stations[0][1];
-    const opts = devices.map(d => `<option value="${d}" ${d === monState.dev ? 'selected' : ''}>${d}</option>`).join('');
-    return `<div class="hier-bar"><span class="hier-lb">计量设备</span><select class="hier-select" id="hierSelect">${opts}</select></div>`;
-  }
+  html += `</div>`;
+  return html;
+}
 
-  if (s.hasL1 && !s.hasL2) {
-    /* 完整二级：站房→回路 */
-    if (monState.scenario === 'full2') {
-      const stOpts = h.stations.map(([st]) => `<option value="${st}" ${st === monState.station ? 'selected' : ''}>${st}</option>`).join('');
-      const curSt = h.stations.find(([n]) => n === monState.station) || h.stations[0];
-      const circuits = curSt ? curSt[1] : [];
-      const circuitOpts = ['<option value="">请选择</option>'].concat(circuits.map(c => `<option value="${c}" ${c === monState.circuit ? 'selected' : ''}>${c}</option>`)).join('');
-      return `<div class="hier-bar">
-        <span class="hier-lb">监测层级</span>
-        <select class="hier-select" id="hierStation">${stOpts}</select>
-        <span class="hier-arrow">▶</span>
-        <select class="hier-select" id="hierCircuit">${circuitOpts}</select>
-      </div>`;
-    }
-    /* 其他情况：单个接入点下拉框 */
-    const opts = h.stations.map(([st]) => `<option value="${st}" ${st === monState.station ? 'selected' : ''}>${st}</option>`).join('');
-    return `<div class="hier-bar"><span class="hier-lb">接入点</span><select class="hier-select" id="hierSelect">${opts}</select></div>`;
-  }
+function isNodeSelected(node) {
+  /* 判断节点是否被选中 */
+  if (node.type === 'station') return monState.station === node.name;
+  if (node.type === 'device') return monState.dev === node.name;
+  if (node.type === 'circuit') return monState.circuit === node.name;
+  return false;
+}
 
-  return '';
+function getCurrentPath() {
+  const parts = [];
+  if (monState.station) parts.push(monState.station);
+  if (monState.dev) parts.push(monState.dev);
+  if (monState.circuit) parts.push(monState.circuit);
+  return parts.length ? parts.join(' / ') : '请选择';
+}
+
+function hierSelectHTML() {
+  const tree = getTreeData();
+  const treeHTML = tree.children.map(node => renderTreeNode(node)).join('');
+  const path = getCurrentPath();
+
+  return `
+    <div class="hier-tree-container">
+      <div class="hier-tree-trigger" id="hierTreeTrigger">
+        <span class="trigger-lb">监测层级</span>
+        <span class="trigger-path">${path}</span>
+        <span class="trigger-arrow">▼</span>
+      </div>
+      <div class="hier-tree-panel" id="hierTreePanel">
+        <div class="hier-tree-title">设备树</div>
+        <div class="hier-tree" id="deviceTree">
+          ${treeHTML}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 /* ==================== 场景切换器 ==================== */
@@ -810,6 +912,7 @@ function renderMonitor() {
     monState.station = null;
     monState.dev = null;
     monState.circuit = null;
+    monState.hierLevel = 'station';
     /* 确保场景对新能源类型有效 */
     const availableScenarios = SCENARIO_MAP[monState.tab] || ['full', 'noL1', 'direct'];
     if (!availableScenarios.includes(monState.scenario)) {
@@ -828,65 +931,74 @@ function renderMonitor() {
     monState.station = null;
     monState.dev = null;
     monState.circuit = null;
-    const s = SCENARIOS[monState.scenario];
-    monState.hierLevel = (s.hasL1 && s.hasL2) ? 'station' : 'dev';
+    monState.hierLevel = 'station';
     syncHier();
     renderMonitor();
   });
 
-  /* 层级下拉 */
-  const hierStation = root.querySelector('#hierStation');
-  const hierDev = root.querySelector('#hierDev');
-  const hierSelect = root.querySelector('#hierSelect');
-  const hierCircuit = root.querySelector('#hierCircuit');
+  /* 设备树触发器 */
+  const trigger = root.querySelector('#hierTreeTrigger');
+  const panel = root.querySelector('#hierTreePanel');
+  if (trigger && panel) {
+    trigger.addEventListener('click', () => {
+      const isOpen = panel.classList.toggle('open');
+      trigger.classList.toggle('open', isOpen);
+    });
+    document.addEventListener('click', (e) => {
+      if (!root.contains(e.target)) {
+        panel.classList.remove('open');
+        trigger.classList.remove('open');
+      }
+    });
+  }
 
-  if (hierStation) {
-    hierStation.addEventListener('change', (e) => {
-      const h = getHier();
-      const st = h.stations.find(([n]) => n === e.target.value);
-      if (!st) return;
-      monState.station = st[0];
-      const s = SCENARIOS[monState.scenario];
-      if (s.hasL1 && s.hasL2) {
-        /* 完整三级：更新dev */
-        monState.dev = st[1][0];
-        monState.hierLevel = 'station';
-      } else if (monState.scenario === 'full2') {
-        /* 完整二级：切换站房时回路重置为"请选择" */
-        monState.circuit = null;
+  /* 设备树点击 */
+  const deviceTree = root.querySelector('#deviceTree');
+  if (deviceTree) {
+    deviceTree.addEventListener('click', (e) => {
+      const nodeEl = e.target.closest('.tree-node');
+      if (!nodeEl) return;
+
+      const toggle = e.target.closest('.tree-toggle');
+      const wrap = nodeEl.closest('.tree-node-wrap');
+
+      if (toggle && !toggle.classList.contains('leaf')) {
+        const children = wrap.querySelector(':scope > .tree-children');
+        if (children) {
+          const collapsed = children.classList.toggle('collapsed');
+          toggle.textContent = collapsed ? '▶' : '▼';
+          toggle.classList.toggle('expanded', !collapsed);
+        }
+        return;
       }
-      renderMonitor();
-    });
-  }
-  if (hierDev) {
-    hierDev.addEventListener('change', (e) => {
-      if (e.target.value) {
-        monState.dev = e.target.value;
-        monState.hierLevel = 'dev';
-      } else {
+
+      const type = nodeEl.dataset.type;
+      const id = nodeEl.dataset.id;
+      const name = id.replace(/^(st-|dev-|cir-)/, '');
+
+      if (type === 'station') {
+        monState.station = name;
         monState.dev = null;
+        monState.circuit = null;
         monState.hierLevel = 'station';
+      } else if (type === 'device') {
+        monState.dev = name;
+        monState.circuit = null;
+        monState.hierLevel = 'dev';
+      } else if (type === 'circuit') {
+        monState.circuit = name;
+        monState.hierLevel = 'circuit';
+        const s = SCENARIOS[monState.scenario];
+        if (!s.hasL2) {
+          const h = getHier();
+          for (const [stName, items] of h.stations) {
+            if (items.includes(name)) { monState.station = stName; break; }
+          }
+        }
       }
-      renderMonitor();
-    });
-  }
-  if (hierSelect) {
-    hierSelect.addEventListener('change', (e) => {
-      const s = SCENARIOS[monState.scenario];
-      const h = getHier();
-      if (!s.hasL1 && s.hasL2) {
-        monState.dev = e.target.value;
-      } else if (s.hasL1 && !s.hasL2) {
-        monState.station = e.target.value;
-        const circuits = getCircuits();
-        monState.circuit = circuits[0]?.name || null;
-      }
-      renderMonitor();
-    });
-  }
-  if (hierCircuit) {
-    hierCircuit.addEventListener('change', (e) => {
-      monState.circuit = e.target.value;
+      syncHier();
+      panel.classList.remove('open');
+      trigger.classList.remove('open');
       renderMonitor();
     });
   }
@@ -975,6 +1087,7 @@ window.addEventListener('hashchange', () => {
     monState.station = null;
     monState.dev = null;
     monState.circuit = null;
+    monState.hierLevel = 'station';
     syncHier();
     renderMonitor();
   }

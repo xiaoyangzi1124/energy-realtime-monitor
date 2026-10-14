@@ -57,6 +57,94 @@
 .hier-select:focus { border-color: var(--primary); }
 .hier-arrow { color: #bbb; font-size: 12px; margin: 0 2px; }
 
+/* ---------------- 设备树选择器（悬浮下拉） ---------------- */
+.hier-tree-container {
+  position: relative;
+  margin-bottom: 16px;
+}
+.hier-tree-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.hier-tree-trigger .trigger-lb {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+.hier-tree-trigger .trigger-path {
+  font-size: 13px;
+  color: var(--primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hier-tree-trigger .trigger-arrow {
+  font-size: 12px;
+  color: #999;
+  transition: transform 0.2s;
+}
+.hier-tree-trigger.open .trigger-arrow {
+  transform: rotate(180deg);
+}
+.hier-tree-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 12px 16px;
+  z-index: 100;
+  display: none;
+}
+.hier-tree-panel.open { display: block; }
+.hier-tree-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+.hier-tree {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.hier-tree::-webkit-scrollbar { width: 4px; }
+.hier-tree::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 2px; }
+.tree-node-wrap { }
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+  user-select: none;
+}
+.tree-node:hover { background: #F0F7FF; }
+.tree-toggle {
+  width: 16px;
+  font-size: 10px;
+  color: #999;
+  text-align: center;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.tree-toggle.leaf { color: var(--primary); font-size: 8px; }
+.tree-label { font-size: 13px; color: #333; }
+.tree-label.selected { color: var(--primary); font-weight: 600; }
+.tree-children { }
+.tree-children.collapsed { display: none; }
+
 /* ---------------- 区块骨架 ---------------- */
 .mon-grid {
   display: grid;
